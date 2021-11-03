@@ -2,13 +2,12 @@
 
 /**
  * @link              d.kasperavicius@gmail.com
- * @since             1.0.1
  * @package           Dk_Amount_In_Package
  * @wordpress-plugin
  * Plugin Name:       Package amount calculator
  * Description:       Calculate quantity by the amount in the package
  * Plugin URI:        d.kasperavicius@gmail.com
- * Version:           1.0.0
+ * Version:           1.0.2
  * Author:            Dainius Kasperavicius
  * Author URI:        d.kasperavicius@gmail.com
  * Text Domain:       dk-amount-in-package
@@ -21,7 +20,7 @@ if (!defined('WPINC')) {
 class DkAmountInPackage
 {
 
-    private $version = '1.0.1';
+    private $version = '1.0.2';
 
     public function __construct()
     {
@@ -265,7 +264,7 @@ class DkAmountInPackage
     public function dk_package_amount_order_item_display_meta_value($display_value, $meta, $item): string
     {
         if ($meta->key === '_amount_in_package') {
-            return sprintf('%s %s',$display_value, $item->get_meta('_amount_in_package_unit'));
+            return sprintf('%s %s', $display_value, $item->get_meta('_amount_in_package_unit'));
         } else {
             return $display_value;
         }
@@ -284,6 +283,7 @@ class DkAmountInPackage
         if ($packageAmount) {
             $packageUnit = $item->get_meta('_amount_in_package_unit', true);
             $separator = $this->getQuantityPackageAmountSeparator();
+
             return $qty_display." $separator $packageAmount $packageUnit";
         }
 
@@ -293,3 +293,17 @@ class DkAmountInPackage
 
 $package = new DkAmountInPackage();
 $package->init();
+
+function amount_in_package_activate()
+{
+    if (!class_exists('WooCommerce')) {
+        deactivate_plugins(plugin_basename(__FILE__));
+        wp_die(
+            __('Please install and Activate WooCommerce.', 'dk-amount-in-package'),
+            'Plugin dependency check',
+            ['back_link' => true]
+        );
+    }
+}
+
+register_activation_hook(__FILE__, 'amount_in_package_activate');
