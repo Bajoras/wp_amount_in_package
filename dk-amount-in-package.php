@@ -2,7 +2,7 @@
 
 /**
  * @link              d.kasperavicius@gmail.com
- * @since             1.0.0
+ * @since             1.0.1
  * @package           Dk_Amount_In_Package
  * @wordpress-plugin
  * Plugin Name:       Package amount calculator
@@ -21,7 +21,7 @@ if (!defined('WPINC')) {
 class DkAmountInPackage
 {
 
-    private $version = '1.0.0';
+    private $version = '1.0.1';
 
     public function __construct()
     {
@@ -77,14 +77,20 @@ class DkAmountInPackage
             2
         );
         add_action(
-            'woocommerce_after_quantity_input_field',
-            [$this, 'dk_package_amount_after_quantity_input_field']
+            'dk_package_amount_before_package_amount_input_field',
+            [$this, 'dk_package_amount_before_package_amount_input_field']
         );
     }
 
-    public function dk_package_amount_after_quantity_input_field(): void
+    private function getQuantityPackageAmountSeparator(): string
     {
-        echo '<span class="after_quantity">=</span>';
+        return apply_filters('dk_package_amount_quantity_package_amount_separator', '=');
+    }
+
+    public function dk_package_amount_before_package_amount_input_field(): void
+    {
+        $separator = $this->getQuantityPackageAmountSeparator();
+        echo "<span class=\"before_package_amount\">$separator</span>";
     }
 
     public function dk_package_amount_product_options_inventory_product_data(): void
@@ -277,8 +283,8 @@ class DkAmountInPackage
         $packageAmount = $item->get_meta('_amount_in_package', true);
         if ($packageAmount) {
             $packageUnit = $item->get_meta('_amount_in_package_unit', true);
-
-            return $qty_display.' = $packageAmount $packageUnit';
+            $separator = $this->getQuantityPackageAmountSeparator();
+            return $qty_display." $separator $packageAmount $packageUnit";
         }
 
         return $qty_display;

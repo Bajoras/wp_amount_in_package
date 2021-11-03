@@ -45,7 +45,8 @@ if ($max_value && $min_value === $max_value) {
             placeholder="<?php echo esc_attr($placeholder); ?>"
             inputmode="<?php echo esc_attr($inputmode); ?>"/>
     <?php do_action('woocommerce_after_quantity_input_field');
-    if ('yes' === get_option('woocommerce_manage_amount_in_package') && $package_amount_enable) {
+    if ($package_amount_enable) {
+        do_action('dk_package_amount_before_package_amount_input_field');
         $package_label = !empty($args['product_name'])
             ? sprintf(
                 esc_html__('%s amount in package', 'dk-amount-in-package'),
