@@ -30,9 +30,15 @@ if ($max_value && $min_value === $max_value) {
     ?>
     <div class="quantity">
     <?php do_action('woocommerce_before_quantity_input_field'); ?>
-    <label class="screen-reader-text" for="<?php echo esc_attr($input_id); ?>"><?php echo esc_attr($label); ?></label>
+    <label class="screen-reader-text<?php if ($package_amount_enable) {
+        echo ' hidden';
+    } ?>" for="<?php echo esc_attr($input_id); ?>"><?php echo esc_attr($label); ?></label>
     <input
-            type="number"
+            type="<?php if ($package_amount_enable) {
+                echo 'hidden';
+            } else {
+                echo 'number';
+            } ?>"
             id="<?php echo esc_attr($input_id); ?>"
             class="<?php echo esc_attr(join(' ', (array)$classes)); ?>"
             step="<?php echo esc_attr($step); ?>"
@@ -46,7 +52,6 @@ if ($max_value && $min_value === $max_value) {
             inputmode="<?php echo esc_attr($inputmode); ?>"/>
     <?php do_action('woocommerce_after_quantity_input_field');
     if ($package_amount_enable) {
-        do_action('dk_package_amount_before_package_amount_input_field');
         $package_label = !empty($args['product_name'])
             ? sprintf(
                 esc_html__('%s amount in package', 'dk-amount-in-package'),
@@ -56,7 +61,7 @@ if ($max_value && $min_value === $max_value) {
         <label class="screen-reader-text"
                for="<?php echo esc_attr($package_input_id); ?>"><?php echo esc_attr($package_label); ?></label>
         <input type="hidden" id="<?php echo esc_attr($package_amount_input_id); ?>" class="qty"
-               name="<?php echo esc_attr($package_input_name); ?>"
+               name="<?php echo esc_attr($package_amount_name); ?>"
                value="<?php echo esc_attr($package_amount); ?>"/>
         <input
                 type="number"
@@ -66,7 +71,7 @@ if ($max_value && $min_value === $max_value) {
                 min="<?php echo esc_attr($package_min_value); ?>"
                 max="<?php echo esc_attr($package_max_value); ?>"
                 name="<?php echo esc_attr($package_input_name); ?>"
-                value="<?php echo esc_attr($package_amount_value); ?>"
+                value="<?php echo esc_attr($package_requested_amount); ?>"
                 title="<?php echo esc_attr_x(
                     'Package amount',
                     'Product package amount input tooltip',
@@ -75,7 +80,23 @@ if ($max_value && $min_value === $max_value) {
                 size="4"
                 placeholder="<?php echo esc_attr($package_placeholder); ?>"
                 inputmode="<?php echo esc_attr($package_inputmode); ?>"/>
-        <span class="after_amount_in_package"><?php echo $package_amount_unit ?></span>
+        <span class="after_amount_in_package"><?php echo esc_attr($package_amount_unit) ?></span>
+            <div class="dk_package_amount_summary">
+                <?php if(!is_cart()) { ?>
+                    <span class="amount_wrapper">
+                        <?php _e('Item Cubic: ', 'dk-amount-in-package'); ?>
+                        <span class="amount"><?php echo esc_attr($package_amount) ?></span>
+                    </span><br/>
+                <?php } ?>
+                <span class="quantity_wrapper">
+                    <?php _e('Number of Carton: ', 'dk-amount-in-package'); ?>
+                    <span class="amount_quantity"><?php echo esc_attr($input_value); ?></span>
+                </span><br/>
+                <span class="total_real_wrapper">
+                    <?php _e('Quantity: ', 'dk-amount-in-package'); ?>
+                    <span class="amount_real_amount"><?php echo esc_attr($package_real_amount) ?></span>
+                </span><br/>
+            </div>
         </div>
         <?php
     }
