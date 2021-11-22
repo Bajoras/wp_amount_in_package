@@ -7,7 +7,7 @@
  * Plugin Name:       Package amount calculator
  * Description:       Calculate quantity by the amount in the package
  * Plugin URI:        d.kasperavicius@gmail.com
- * Version:           1.2.0
+ * Version:           1.2.3
  * Author:            Dainius Kasperavicius
  * Author URI:        d.kasperavicius@gmail.com
  * Text Domain:       dk-amount-in-package
@@ -20,7 +20,7 @@ if (!defined('WPINC')) {
 class DkAmountInPackage
 {
 
-    private $version = '1.2.0';
+    private $version = '1.2.3';
     private $requestedAmountInPackage = '_requested_amount_in_package';
     private $amountInPackage = '_amount_in_package';
     private $amountInPackageUnit = '_amount_in_package_unit';
@@ -61,7 +61,7 @@ class DkAmountInPackage
             'woocommerce_checkout_create_order_line_item',
             [$this, 'dk_package_amount_checkout_create_order_line_item'],
             10,
-            4
+            3
         );
         add_filter(
             'woocommerce_order_item_display_meta_key',
@@ -84,12 +84,6 @@ class DkAmountInPackage
             'dk_package_amount_before_package_amount_input_field',
             [$this, 'dk_package_amount_before_package_amount_input_field']
         );
-//        add_filter(
-//            'woocommerce_cart_item_product',
-//            [$this, 'dk_package_amount_cart_item_product'],
-//            10,
-//            3
-//        );
         add_filter(
             'woocommerce_add_cart_item_data',
             [$this, 'dk_package_amount_add_cart_item_data'],
@@ -98,13 +92,27 @@ class DkAmountInPackage
         );
         add_action(
             'woocommerce_cart_item_set_quantity',
-            [$this, 'dk_package_amount__cart_item_set_quantity'],
+            [$this, 'dk_package_amount_cart_item_set_quantity'],
             10,
             3
         );
+        add_filter('woocommerce_available_variation', [$this, 'dk_package_amount_available_variation'], 10, 3);
     }
 
-    public function dk_package_amount__cart_item_set_quantity($cartItemKey, $quantity, $cart)
+    public function dk_package_amount_available_variation(
+        array $variations,
+        WC_Product_Variable $parentProduct,
+        WC_Product_Variation $variant
+    ): array {
+        $variations['max_qty'] = 0 < $variant->get_max_purchase_quantity() ?
+            $variant->get_max_purchase_quantity() * $parentProduct->get_meta($this->amountInPackage, 'edit') : '';
+        $variations[$this->amountInPackage] = $parentProduct->get_meta($this->amountInPackage, 'edit');
+        $variations[$this->amountInPackageUnit] = $parentProduct->get_meta($this->amountInPackageUnit, 'edit');
+
+        return $variations;
+    }
+
+    public function dk_package_amount_cart_item_set_quantity(string $cartItemKey, int $quantity, WC_Cart $cart)
     {
         if (isset($_POST['cart'])) {
             $cart->cart_contents[$cartItemKey][$this->requestedAmountInPackage] =
@@ -166,7 +174,7 @@ class DkAmountInPackage
         echo '</div>';
     }
 
-    public function dk_package_amount_admin_process_product_object($product): void
+    public function dk_package_amount_admin_process_product_object(WC_Product $product): void
     {
         $product->update_meta_data(
             $this->amountInPackage,
@@ -200,25 +208,28 @@ class DkAmountInPackage
         }
     }
 
-    public function dk_package_amount_locate_template($template, $template_name, $template_path): string
-    {
+    public function dk_package_amount_locate_template(
+        string $template,
+        string $templateName,
+        string $templatePath
+    ): string {
         global $woocommerce;
         $_template = $template;
-        if (!$template_path) {
-            $template_path = $woocommerce->template_url;
+        if (!$templatePath) {
+            $templatePath = $woocommerce->template_url;
         }
 
         $plugin_path = untrailingslashit(plugin_dir_path(__FILE__)).'/template/woocommerce/';
 
         $template = locate_template(
             [
-                $template_path.$template_name,
-                $template_name
+                $templatePath.$templateName,
+                $templateName
             ]
         );
 
-        if (!$template && file_exists($plugin_path.$template_name)) {
-            $template = $plugin_path.$template_name;
+        if (!$template && file_exists($plugin_path.$templateName)) {
+            $template = $plugin_path.$templateName;
         }
 
         if (!$template) {
@@ -228,7 +239,7 @@ class DkAmountInPackage
         return $template;
     }
 
-    public function dk_package_amount_quantity_input_args($args, $product): array
+    public function dk_package_amount_quantity_input_args(array $args, WC_Product $product): array
     {
         $requestedAmount = null;
         if (is_cart()) {
@@ -252,13 +263,13 @@ class DkAmountInPackage
         if ($requestedAmount === null) {
             $requestedAmount = $args['input_value'] * $amountInPackage;
         }
-
+        $args['classes'] = ['input-text', 'text'];
         $defaults = [
             'package_amount_enable' => $this->isManageAmountEnable($product->get_id()),
             'package_amount_input_id' => uniqid('package_amount_quantity_'),
             'package_input_id' => uniqid('package_quantity_'),
             'package_amount_name' => is_cart() ? str_replace('[qty]', '['.$this->amountInPackage.']',
-                $args['input_name']) : $this->amountInPackageUnit,
+                $args['input_name']) : $this->amountInPackage,
             'package_input_name' => is_cart() ? str_replace('[qty]', '['.$this->requestedAmountInPackage.']',
                 $args['input_name']) : $this->requestedAmountInPackage,
             'package_amount' => $amountInPackage,
@@ -275,7 +286,7 @@ class DkAmountInPackage
         return wp_parse_args($args, $defaults);
     }
 
-    public function dk_package_amount_inventory_settings($settings): array
+    public function dk_package_amount_inventory_settings(array $settings): array
     {
         $last = array_pop($settings);
         $settings[] = [
@@ -295,8 +306,11 @@ class DkAmountInPackage
         return get_post_meta($id, '_manage_amount_in_package', true) === 'yes';
     }
 
-    public function dk_package_amount_checkout_create_order_line_item($item, $cartItemLey, $values, $order): void
-    {
+    public function dk_package_amount_checkout_create_order_line_item(
+        WC_Order_Item_Product $item,
+        string $cartItemKey,
+        array $values
+    ): void {
         if ($this->isManageAmountEnable($item->get_product_id())) {
             $packageAmount = max(1, get_post_meta($item->get_product_id(), $this->amountInPackage, true));
             $packageUnit = get_post_meta($item->get_product_id(), $this->amountInPackageUnit, true);
@@ -307,80 +321,72 @@ class DkAmountInPackage
         }
     }
 
-    public function dk_package_amount_order_item_display_meta_key($display_key): string
+    public function dk_package_amount_order_item_display_meta_key(string $displayKey): string
     {
-        if ($display_key === $this->amountInPackage) {
+        if ($displayKey === $this->amountInPackage) {
             return __('Amount in package', 'dk-amount-in-package');
         } else {
-            if ($display_key === $this->requestedAmountInPackage) {
+            if ($displayKey === $this->requestedAmountInPackage) {
                 return __('Requested amount', 'dk-amount-in-package');
             } else {
-                return $display_key;
+                return $displayKey;
             }
         }
     }
 
-    public function dk_package_amount_order_item_display_meta_value($display_value, $meta, $item): string
-    {
+    public function dk_package_amount_order_item_display_meta_value(
+        string $displayValue,
+        WC_Meta_Data $meta,
+        WC_Order_Item_Product $item
+    ): string {
         if ($meta->key === $this->amountInPackage) {
-            return sprintf('%s %s', $display_value, $item->get_meta($this->amountInPackageUnit));
+            return sprintf('%s %s', $displayValue, $item->get_meta($this->amountInPackageUnit));
         } else {
             if ($meta->key === $this->requestedAmountInPackage) {
-                return sprintf('%s %s', $display_value, $item->get_meta($this->amountInPackageUnit));
+                return sprintf('%s %s', $displayValue, $item->get_meta($this->amountInPackageUnit));
             } else {
-                return $display_value;
+                return $displayValue;
             }
         }
     }
 
-    public function dk_package_amount_hidden_order_itemmeta($items): array
+    public function dk_package_amount_hidden_order_itemmeta(array $items): array
     {
         $items[] = $this->amountInPackageUnit;
 
         return $items;
     }
 
-    public function dk_package_amount_email_order_item_quantity($qty_display, $item): string
+    public function dk_package_amount_email_order_item_quantity(string $qtyDisplay, WC_Order_Item_Product $item): string
     {
-        $packageAmount = $item->get_meta($this->amountInPackage, true);
+        $packageAmount = $item->get_meta($this->amountInPackage);
         if ($packageAmount) {
-            $packageUnit = $item->get_meta($this->amountInPackageUnit, true);
-            $quantityLine = __('Number of Carton: ', 'dk-amount-in-package').$qty_display."<br/>";
+            $packageUnit = $item->get_meta($this->amountInPackageUnit);
+            $quantityLine = __('Number of Carton: ', 'dk-amount-in-package').$qtyDisplay."<br/>";
             $quantityLine .= __('Quantity: ', 'dk-amount-in-package').$packageAmount." ".$packageUnit;
 
             return $quantityLine;
         }
 
-        return $qty_display;
+        return $qtyDisplay;
     }
 
-    private function formatDecimal($value, $dp = 3, $trimZeros = true): string
+    /**
+     * @param float|string $value
+     */
+    private function formatDecimal($value, int $dp = 3, bool $trimZeros = true): string
     {
         return wc_format_decimal($value, $dp, $trimZeros);
     }
 
-    public function dk_package_amount_cart_item_product($cartItemData, $cartItem, $cartItemKey)
+    public function dk_package_amount_add_cart_item_data(array $cartItemData, int $productId): array
     {
-        WC()->cart->get_cart_contents();
-        $cartItemData->set_meta_data([
-            [
-                'key' => $this->requestedAmountInPackage,
-                'value' => $cartItem[$this->requestedAmountInPackage],
-                'id' => uniqid()
-            ]
-        ]);
+        $product = wc_get_product($productId);
+        $amountInPackage = $product->get_meta($this->amountInPackage);
+        $cartItemData[$this->amountInPackage] = $amountInPackage;
+        $cartItemData[$this->requestedAmountInPackage] = $this->getRequestedPackageAmount();
 
         return $cartItemData;
-    }
-
-    public function dk_package_amount_add_cart_item_data($cart_item_data, $product_id)
-    {
-        $product = wc_get_product($product_id);
-        $amountInPackage = $product->get_meta($this->amountInPackage);
-        $cart_item_data[$this->amountInPackage] = $amountInPackage;
-        $cart_item_data[$this->requestedAmountInPackage] = $this->getRequestedPackageAmount();
-
-        return $cart_item_data;
     }
 
     private function getRequestedPackageAmount(): ?string

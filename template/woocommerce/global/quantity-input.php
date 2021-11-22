@@ -60,7 +60,7 @@ if ($max_value && $min_value === $max_value) {
         ?>
         <label class="screen-reader-text"
                for="<?php echo esc_attr($package_input_id); ?>"><?php echo esc_attr($package_label); ?></label>
-        <input type="hidden" id="<?php echo esc_attr($package_amount_input_id); ?>" class="qty"
+        <input type="hidden" id="<?php echo esc_attr($package_amount_input_id); ?>"
                name="<?php echo esc_attr($package_amount_name); ?>"
                value="<?php echo esc_attr($package_amount); ?>"/>
         <input
