@@ -7,7 +7,7 @@
  * Plugin Name:       Package amount calculator
  * Description:       Calculate quantity by the amount in the package
  * Plugin URI:        d.kasperavicius@gmail.com
- * Version:           1.2.3
+ * Version:           1.2.5
  * Author:            Dainius Kasperavicius
  * Author URI:        d.kasperavicius@gmail.com
  * Text Domain:       dk-amount-in-package
@@ -20,10 +20,13 @@ if (!defined('WPINC')) {
 class DkAmountInPackage
 {
 
-    private $version = '1.2.3';
+    private $version = '1.2.5';
     private $requestedAmountInPackage = '_requested_amount_in_package';
     private $amountInPackage = '_amount_in_package';
     private $amountInPackageUnit = '_amount_in_package_unit';
+    private $metricText = '_metrics_text';
+    private $packageText = '_package_text';
+    private $totalAmountText = '_total_amount_text';
 
     public function __construct()
     {
@@ -65,7 +68,9 @@ class DkAmountInPackage
         );
         add_filter(
             'woocommerce_order_item_display_meta_key',
-            [$this, 'dk_package_amount_order_item_display_meta_key']
+            [$this, 'dk_package_amount_order_item_display_meta_key'],
+            10,
+            3
         );
         add_filter(
             'woocommerce_order_item_display_meta_value',
@@ -171,6 +176,36 @@ class DkAmountInPackage
             ]
         );
 
+        woocommerce_wp_text_input(
+            [
+                'id' => $this->metricText,
+                'value' => $product_object->get_meta($this->metricText, 'edit') === '' ?
+                    __('Cubic: ', 'dk-amount-in-package') :
+                    $product_object->get_meta($this->metricText, 'edit'),
+                'label' => __('Metric label', 'dk-amount-in-package')
+            ]
+        );
+
+        woocommerce_wp_text_input(
+            [
+                'id' => $this->packageText,
+                'value' => $product_object->get_meta($this->packageText, 'edit') === '' ?
+                    __('Carton: ', 'dk-amount-in-package') :
+                    $product_object->get_meta($this->packageText, 'edit'),
+                'label' => __('Package label', 'dk-amount-in-package'),
+            ]
+        );
+
+        woocommerce_wp_text_input(
+            [
+                'id' => $this->totalAmountText,
+                'value' => $product_object->get_meta($this->totalAmountText, 'edit') === '' ?
+                    __('Total amount in metrics: ', 'dk-amount-in-package') :
+                    $product_object->get_meta($this->totalAmountText, 'edit'),
+                'label' => __('Total amount in metrics label', 'dk-amount-in-package')
+            ]
+        );
+
         echo '</div>';
     }
 
@@ -178,20 +213,34 @@ class DkAmountInPackage
     {
         $product->update_meta_data(
             $this->amountInPackage,
-            isset($_POST[$this->amountInPackage])
-                ? max('1', $this->formatDecimal($_POST[$this->amountInPackage]))
-                : '1'
+            max('1', $this->formatDecimal($this->getPostValue($this->amountInPackage)))
         );
         $product->update_meta_data(
             $this->amountInPackageUnit,
-            isset($_POST[$this->amountInPackageUnit]) ? sanitize_text_field($_POST[$this->amountInPackageUnit]) : ''
+            $this->getPostValue($this->amountInPackageUnit)
         );
         $product->update_meta_data(
             '_manage_amount_in_package',
-            isset($_POST['_manage_amount_in_package']) && $_POST['_manage_amount_in_package'] === 'yes' ? 'yes' : 'no'
+            $this->getPostValue('_manage_amount_in_package') === 'yes' ? 'yes' : 'no'
+        );
+        $product->update_meta_data(
+            $this->metricText,
+            $this->getPostValue($this->metricText)
+        );
+        $product->update_meta_data(
+            $this->packageText,
+            $this->getPostValue($this->packageText)
+        );
+        $product->update_meta_data(
+            $this->totalAmountText,
+            $this->getPostValue($this->totalAmountText)
         );
     }
 
+    private function getPostValue(string $key): string
+    {
+        return isset($_POST[$key]) ? sanitize_text_field($_POST[$key]) : '';
+    }
 
     public function dk_package_amount_admin_enqueue_scripts(): void
     {
@@ -241,6 +290,9 @@ class DkAmountInPackage
 
     public function dk_package_amount_quantity_input_args(array $args, WC_Product $product): array
     {
+        if ($product instanceof WC_Product_Variation) {
+            $product = wc_get_product($product->get_parent_id());
+        }
         $requestedAmount = null;
         if (is_cart()) {
             preg_match("/^cart\[(.*)\]\[qty\]/", $args['input_name'], $key);
@@ -275,12 +327,15 @@ class DkAmountInPackage
             'package_amount' => $amountInPackage,
             'package_requested_amount' => $this->formatDecimal($requestedAmount),
             'package_max_value' => $args['max_value'] > 0 ? $args['max_value'] * $amountInPackage : '',
-            'package_min_value' => $args['min_value'],
+            'package_min_value' => max($args['min_value'], $amountInPackage),
             'package_classes' => ['input-text', 'text', 'qty'],
             'package_step' => 'any',
             'package_inputmode' => 'numeric',
             'package_amount_unit' => $product->get_meta($this->amountInPackageUnit, 'edit'),
             'package_real_amount' => $this->formatDecimal($args['input_value'] * $amountInPackage),
+            'metric_text' => $product->get_meta($this->metricText),
+            'package_text' => $product->get_meta($this->packageText),
+            'total_amount_text' => $product->get_meta($this->totalAmountText)
         ];
 
         return wp_parse_args($args, $defaults);
@@ -314,17 +369,31 @@ class DkAmountInPackage
         if ($this->isManageAmountEnable($item->get_product_id())) {
             $packageAmount = max(1, get_post_meta($item->get_product_id(), $this->amountInPackage, true));
             $packageUnit = get_post_meta($item->get_product_id(), $this->amountInPackageUnit, true);
-            $item->update_meta_data($this->amountInPackage,
-                $this->formatDecimal($item->get_quantity() * $packageAmount));
+            $item->update_meta_data(
+                $this->amountInPackage,
+                $this->formatDecimal($item->get_quantity() * $packageAmount)
+            );
             $item->update_meta_data($this->amountInPackageUnit, $packageUnit);
             $item->update_meta_data($this->requestedAmountInPackage, $values[$this->requestedAmountInPackage]);
+            $item->update_meta_data($this->metricText, get_post_meta($item->get_product_id(), $this->metricText, true));
+            $item->update_meta_data(
+                $this->packageText,
+                get_post_meta($item->get_product_id(), $this->packageText, true)
+            );
+            $item->update_meta_data(
+                $this->totalAmountText,
+                get_post_meta($item->get_product_id(), $this->totalAmountText, true)
+            );
         }
     }
 
-    public function dk_package_amount_order_item_display_meta_key(string $displayKey): string
-    {
+    public function dk_package_amount_order_item_display_meta_key(
+        string $displayKey,
+        WC_Meta_Data $meta,
+        WC_Order_Item_Product $item
+    ): string {
         if ($displayKey === $this->amountInPackage) {
-            return __('Amount in package', 'dk-amount-in-package');
+            return $item->get_meta($this->totalAmountText);
         } else {
             if ($displayKey === $this->requestedAmountInPackage) {
                 return __('Requested amount', 'dk-amount-in-package');
@@ -339,22 +408,22 @@ class DkAmountInPackage
         WC_Meta_Data $meta,
         WC_Order_Item_Product $item
     ): string {
-        if ($meta->key === $this->amountInPackage) {
+        $formatValue = function (string $displayValue, WC_Order_Item_Product $item) {
             return sprintf('%s %s', $displayValue, $item->get_meta($this->amountInPackageUnit));
+        };
+        if ($meta->key === $this->amountInPackage || $meta->key === $this->requestedAmountInPackage) {
+            return $formatValue($displayValue, $item);
         } else {
-            if ($meta->key === $this->requestedAmountInPackage) {
-                return sprintf('%s %s', $displayValue, $item->get_meta($this->amountInPackageUnit));
-            } else {
-                return $displayValue;
-            }
+            return rtrim($displayValue, ':');
         }
     }
 
     public function dk_package_amount_hidden_order_itemmeta(array $items): array
     {
-        $items[] = $this->amountInPackageUnit;
-
-        return $items;
+        return array_merge(
+            $items,
+            [$this->amountInPackageUnit, $this->metricText, $this->packageText, $this->totalAmountText]
+        );
     }
 
     public function dk_package_amount_email_order_item_quantity(string $qtyDisplay, WC_Order_Item_Product $item): string
@@ -362,8 +431,8 @@ class DkAmountInPackage
         $packageAmount = $item->get_meta($this->amountInPackage);
         if ($packageAmount) {
             $packageUnit = $item->get_meta($this->amountInPackageUnit);
-            $quantityLine = __('Number of Carton: ', 'dk-amount-in-package').$qtyDisplay."<br/>";
-            $quantityLine .= __('Quantity: ', 'dk-amount-in-package').$packageAmount." ".$packageUnit;
+            $quantityLine = $item->get_meta($this->packageText).' '.$qtyDisplay.'<br/>';
+            $quantityLine .= $item->get_meta($this->totalAmountText).' '.$packageAmount.' '.$packageUnit;
 
             return $quantityLine;
         }
@@ -385,6 +454,9 @@ class DkAmountInPackage
         $amountInPackage = $product->get_meta($this->amountInPackage);
         $cartItemData[$this->amountInPackage] = $amountInPackage;
         $cartItemData[$this->requestedAmountInPackage] = $this->getRequestedPackageAmount();
+        $cartItemData[$this->metricText] = $product->get_meta($this->metricText);
+        $cartItemData[$this->packageText] = $product->get_meta($this->packageText);
+        $cartItemData[$this->totalAmountText] = $product->get_meta($this->totalAmountText);
 
         return $cartItemData;
     }

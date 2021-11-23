@@ -84,16 +84,16 @@ if ($max_value && $min_value === $max_value) {
             <div class="dk_package_amount_summary">
                 <?php if(!is_cart()) { ?>
                     <span class="amount_wrapper">
-                        <?php _e('Item Cubic: ', 'dk-amount-in-package'); ?>
+                        <?php echo $metric_text; ?>
                         <span class="amount"><?php echo esc_attr($package_amount) ?></span>
                     </span><br/>
                 <?php } ?>
                 <span class="quantity_wrapper">
-                    <?php _e('Number of Carton: ', 'dk-amount-in-package'); ?>
+                    <?php echo $package_text; ?>
                     <span class="amount_quantity"><?php echo esc_attr($input_value); ?></span>
                 </span><br/>
                 <span class="total_real_wrapper">
-                    <?php _e('Quantity: ', 'dk-amount-in-package'); ?>
+                    <?php echo $total_amount_text; ?>
                     <span class="amount_real_amount"><?php echo esc_attr($package_real_amount) ?></span>
                 </span><br/>
             </div>

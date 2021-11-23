@@ -12,44 +12,17 @@ jQuery(function ($) {
         return packageAmount
     }
 
-    let getSummaryQuantity = function () {
-        return $('.dk_package_amount_summary span.amount_quantity')
-    }
-
-    let getSummaryTotalAmount = function () {
-        return $('.dk_package_amount_summary span.amount_real_amount')
-    }
-
-    $(document.body).on('keyup change', 'input[id^="quantity_"]', function () {
-        let packageAmount = init()
-        let qtyInput = $(this)
-        let packageQtyInput = qtyInput.closest('.quantity').find('input[id^="package_quantity_"]')
-        let summaryQuantity = getSummaryQuantity()
-        let summaryTotalAmount = getSummaryTotalAmount()
-        if (qtyInput.val() === "") {
-            qtyInput.val(0)
-            packageQtyInput.val(0)
-            summaryQuantity.text(0)
-            summaryTotalAmount.text(0)
-        } else {
-            let quantity = parseFloat(qtyInput.val())
-            let totalAmount = (quantity * packageAmount).toFixed(3)
-            packageQtyInput.val(totalAmount)
-            summaryQuantity.text(quantity)
-            summaryTotalAmount.text(totalAmount)
-        }
-    })
     $(document.body).on('keyup change', 'input[id^="package_quantity_"]', function () {
         let packageAmount = init()
         let packageQtyInput = $(this)
-        let qtyInput = packageQtyInput.closest('.quantity').find('input[id^="quantity_"]')
-        let summaryQuantity = getSummaryQuantity()
-        let summaryTotalAmount = getSummaryTotalAmount()
+        let quantityWrapper = packageQtyInput.closest('.quantity')
+        let qtyInput = quantityWrapper.find('input[id^="quantity_"]')
+        let summaryQuantity = quantityWrapper.find('.dk_package_amount_summary span.amount_quantity')
+        let summaryTotalAmount = quantityWrapper.find('.dk_package_amount_summary span.amount_real_amount')
         if (packageQtyInput.val() === "") {
-            qtyInput.val(0)
-            packageQtyInput.val(0)
-            summaryQuantity.text(0)
-            summaryTotalAmount.text(0)
+            qtyInput.val(1)
+            summaryQuantity.text(1)
+            summaryTotalAmount.text(packageAmount)
         } else {
             let quantity = Math.ceil(packageQtyInput.val() / packageAmount)
             qtyInput.val(quantity)
