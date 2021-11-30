@@ -80,12 +80,13 @@ if ($max_value && $min_value === $max_value) {
                 size="4"
                 placeholder="<?php echo esc_attr($package_placeholder); ?>"
                 inputmode="<?php echo esc_attr($package_inputmode); ?>"/>
-        <span class="after_amount_in_package"><?php echo esc_attr($package_amount_unit) ?></span>
+        <span class="after_amount_in_package package_amount_unit"><?php echo esc_attr($package_amount_unit) ?></span>
             <div class="dk_package_amount_summary">
                 <?php if(!is_cart()) { ?>
                     <span class="amount_wrapper">
                         <?php echo $metric_text; ?>
                         <span class="amount"><?php echo esc_attr($package_amount) ?></span>
+                        <span class="package_amount_unit"><?php echo esc_attr($package_amount_unit) ?></span>
                     </span><br/>
                 <?php } ?>
                 <span class="quantity_wrapper">
@@ -95,6 +96,7 @@ if ($max_value && $min_value === $max_value) {
                 <span class="total_real_wrapper">
                     <?php echo $total_amount_text; ?>
                     <span class="amount_real_amount"><?php echo esc_attr($package_real_amount) ?></span>
+                    <span class="package_amount_unit"><?php echo esc_attr($package_amount_unit) ?></span>
                 </span><br/>
             </div>
         </div>
