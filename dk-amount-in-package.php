@@ -7,7 +7,7 @@
  * Plugin Name:       Package amount calculator
  * Description:       Calculate quantity by the amount in the package
  * Plugin URI:        d.kasperavicius@gmail.com
- * Version:           1.3.0
+ * Version:           1.3.1
  * Author:            Dainius Kasperavicius
  * Author URI:        d.kasperavicius@gmail.com
  * Text Domain:       dk-amount-in-package
@@ -20,7 +20,7 @@ if (!defined('WPINC')) {
 class DkAmountInPackage
 {
 
-    private $version = '1.3.0';
+    private $version = '1.3.1';
     private $requestedAmountInPackage = '_requested_amount_in_package';
     private $amountInPackage = '_amount_in_package';
     private $totalAmountInPackage = '_total_amount_in_package';
@@ -405,7 +405,6 @@ class DkAmountInPackage
         if ($requestedAmount === null) {
             $requestedAmount = $args['input_value'];
         }
-        $args['classes'] = ['input-text', 'text'];
         $defaults = [
             'package_amount_enable' => $this->isManageAmountEnable($parentProduct),
             'package_amount_input_id' => uniqid('package_amount_quantity_'),
