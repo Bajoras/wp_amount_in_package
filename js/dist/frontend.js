@@ -1,15 +1,27 @@
 jQuery(function ($) {
     let calculate = function (event) {
-        let packageAmount = parseFloat($(event.target.parentElement).find('input[id^="package_amount_quantity_"]').val())
+        let packageAmount = parseFloat($(event.target.parentElement).find('input[id^="package_amount_quantity_"]').val()),
+            packageQtyInput = $(event.target.parentElement).find('input[id^="package_quantity_"]'),
+            quantityWrapper = packageQtyInput.closest('.quantity'),
+            qtyInput = quantityWrapper.find('input[id^="quantity_"]'),
+            summaryQuantity = quantityWrapper.find('.dk_package_amount_summary span.quantity_wrapper > span.amount_quantity'),
+            summaryTotalAmount = quantityWrapper.find('.dk_package_amount_summary span.total_real_wrapper > span.amount_real_amount'),
+            summaryWeightWrapper = quantityWrapper.find('.dk_package_amount_summary span.weight_wrapper'),
+            summaryWeight = summaryWeightWrapper.find('span.weight'),
+            summarySingleWeight = summaryWeightWrapper.find('span.single_weight'),
+            summarySingleWeightVal = parseFloat(summarySingleWeight.text() || 0)
+
         if (isNaN(packageAmount) || packageAmount === 0) {
             packageAmount = 1
         }
+        if (isNaN(summarySingleWeightVal) || summarySingleWeightVal === 0 || summarySingleWeightVal === '') {
+            summarySingleWeightVal = 0;
+            summaryWeightWrapper.hide()
+        } else {
+            summaryWeightWrapper.show()
+        }
         $(event.target.parentElement).find('.dk_package_amount_summary span.amount').text(packageAmount.toFixed(3))
-        let packageQtyInput = $(event.target.parentElement).find('input[id^="package_quantity_"]')
-        let quantityWrapper = packageQtyInput.closest('.quantity')
-        let qtyInput = quantityWrapper.find('input[id^="quantity_"]')
-        let summaryQuantity = quantityWrapper.find('.dk_package_amount_summary span.amount_quantity')
-        let summaryTotalAmount = quantityWrapper.find('.dk_package_amount_summary span.amount_real_amount')
+
         if (packageQtyInput.val() === "") {
             qtyInput.val(1)
             summaryQuantity.text(1)
@@ -19,6 +31,8 @@ jQuery(function ($) {
             qtyInput.val(quantity)
             summaryQuantity.text(quantity)
             summaryTotalAmount.text((quantity * packageAmount).toFixed(3))
+            summarySingleWeight.text(summarySingleWeightVal)
+            summaryWeight.text(quantity * summarySingleWeightVal)
         }
     }
 
@@ -42,9 +56,11 @@ jQuery(function ($) {
         }
         form.find('input[name^="_requested_amount_in_package"]').val(qty_val)
         form.find('span.after_amount_in_package').val(variation.variation_amount_in_package_unit)
-        form.find('span.package_amount_unit').each(function () {
+        form.find('.dk_package_amount_summary span.package_amount_unit').each(function () {
             $(this).text(variation.variation_amount_in_package_unit)
         })
+        form.find('span.weight_wrapper > span.single_weight').text(variation.weight)
+
         form.trigger('calculate')
     })
 });
