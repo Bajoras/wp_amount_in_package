@@ -50,7 +50,7 @@ if ($max_value && $min_value === $max_value) {
             size="4"
             placeholder="<?php echo esc_attr($placeholder); ?>"
             inputmode="<?php echo esc_attr($inputmode); ?>"/>
-    <?php do_action('woocommerce_after_quantity_input_field');
+    <?php
     if ($package_amount_enable) {
         $package_label = !empty($args['product_name'])
             ? sprintf(
@@ -79,7 +79,8 @@ if ($max_value && $min_value === $max_value) {
                 ); ?>"
                 size="4"
                 placeholder="<?php echo esc_attr($package_placeholder); ?>"
-                inputmode="<?php echo esc_attr($package_inputmode); ?>"/>
+                inputmode="<?php echo esc_attr($package_inputmode);
+                do_action('woocommerce_after_quantity_input_field'); ?>"/>
         <span class="after_amount_in_package package_amount_unit"><?php echo esc_attr($package_amount_unit) ?></span>
             <div class="dk_package_amount_summary">
                 <?php if(!is_cart()) { ?>
@@ -99,7 +100,7 @@ if ($max_value && $min_value === $max_value) {
                     <span class="package_amount_unit"><?php echo esc_attr($package_amount_unit) ?></span>
                 </span><br/>
             </div>
-        </div>
         <?php
     }
+    echo '</div>';
 }

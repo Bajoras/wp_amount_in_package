@@ -1,10 +1,8 @@
 jQuery(function ($) {
     let calculate = function (event) {
-        let packageAmount = $(event.target.parentElement).find('input[id^="package_amount_quantity_"]').val()
-        if (packageAmount === "") {
+        let packageAmount = parseFloat($(event.target.parentElement).find('input[id^="package_amount_quantity_"]').val())
+        if (isNaN(packageAmount) || packageAmount === 0) {
             packageAmount = 1
-        } else {
-            packageAmount = parseFloat(packageAmount)
         }
         $(event.target.parentElement).find('.dk_package_amount_summary span.amount').text(packageAmount.toFixed(3))
         let packageQtyInput = $(event.target.parentElement).find('input[id^="package_quantity_"]')
