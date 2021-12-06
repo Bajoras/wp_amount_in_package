@@ -70,22 +70,43 @@ if ($max_value && $min_value === $max_value) {
                         <?php echo $metric_text; ?>
                         <span class="amount"><?php echo esc_attr($package_amount) ?></span>
                         <span class="package_amount_unit"><?php echo esc_attr($package_amount_unit) ?></span>
-                    </span><br/>
+                        <br/>
+                    </span>
                 <?php } ?>
                 <span class="quantity_wrapper">
                     <?php echo $package_text; ?>
                     <span class="amount_quantity"><?php echo esc_attr($input_value); ?></span>
-                </span><br/>
+                    <br/>
+                </span>
                 <span class="total_real_wrapper">
                     <?php echo $total_amount_text; ?>
                     <span class="amount_real_amount"><?php echo esc_attr($package_real_amount) ?></span>
                     <span class="package_amount_unit"><?php echo esc_attr($package_amount_unit) ?></span>
-                </span><br/>
-                <span class="weight_wrapper" style="display: none">
+                    <br/>
+                </span>
+                <?php
+                if (!$has_weight) {
+                    $style = 'style="display: none"';
+                }
+                ?>
+                <span class="weight_wrapper" <?php echo $style ?>>
                     <?php _e('Weight', 'woocommerce'); ?>:
-                    <span class="weight"></span>
-                    <span class="single_weight" style="display: none"></span>
+                    <span class="weight"><?php !$has_weight ?: print $weight ?></span>
+                    <span class="single_weight" style="display: none"><?php !$has_weight ?: print $weight ?></span>
                     <span><?php echo esc_html(get_option('woocommerce_weight_unit')); ?></span>
+                    <br/>
+                </span>
+                <span class="price_wrapper">
+                    <?php _e('Price', 'woocommerce'); ?>:
+
+                    <span class="single_price" style="display: none"><?php echo $price ?></span>
+                    <?php
+                    printf(
+                        get_woocommerce_price_format(),
+                        '<span>'.get_woocommerce_currency_symbol().'</span>',
+                        '<span class="price">'.$price_html.'</span>'
+                    );
+                    ?>
                 </span>
             </div>
             <?php

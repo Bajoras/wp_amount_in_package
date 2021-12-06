@@ -7,7 +7,7 @@
  * Plugin Name:       Package amount calculator
  * Description:       Calculate quantity by the amount in the package
  * Plugin URI:        d.kasperavicius@gmail.com
- * Version:           1.4.0
+ * Version:           1.5.0
  * Author:            Dainius Kasperavicius
  * Author URI:        d.kasperavicius@gmail.com
  * Text Domain:       dk-amount-in-package
@@ -20,7 +20,7 @@ if (!defined('WPINC')) {
 class DkAmountInPackage
 {
 
-    private $version = '1.4.0';
+    private $version = '1.5.0';
     private $requestedAmountInPackage = '_requested_amount_in_package';
     private $amountInPackage = '_amount_in_package';
     private $totalAmountInPackage = '_total_amount_in_package';
@@ -58,9 +58,10 @@ class DkAmountInPackage
         wp_enqueue_script(
             'dk-amount-in-package-frontend',
             plugin_dir_url(__FILE__).'js/frontend.min.js',
-            ['jquery',],
+            ['jquery'],
             $this->version
         );
+        wp_localize_script('dk-amount-in-package-frontend', '_price_settings', $this->priceParams());
         add_filter('woocommerce_quantity_input_args', [$this, 'dk_package_amount_quantity_input_args'], 10, 2);
         add_filter('woocommerce_locate_template', [$this, 'dk_package_amount_locate_template'], 1, 3);
         add_action(
@@ -181,6 +182,15 @@ class DkAmountInPackage
                 }
             }
         }, 10, 2);
+    }
+
+    private function priceParams(): array
+    {
+        return [
+            'woocommerce_price_num_decimals' => wc_get_price_decimals(),
+            'woocommerce_price_decimal_sep' => stripslashes(wc_get_price_decimal_separator()),
+            'woocommerce_price_thousand_sep' => stripslashes(wc_get_price_thousand_separator())
+        ];
     }
 
     public function dk_package_amount_available_variation(
@@ -424,7 +434,24 @@ class DkAmountInPackage
             'package_real_amount' => $this->formatDecimal($args['input_value'] * $amountInPackage),
             'metric_text' => $parentProduct->get_meta($this->metricText),
             'package_text' => $parentProduct->get_meta($this->packageText),
-            'total_amount_text' => $parentProduct->get_meta($this->totalAmountText)
+            'total_amount_text' => $parentProduct->get_meta($this->totalAmountText),
+            'has_weight' => $product->has_weight(),
+            'weight' => $product->get_weight(),
+            'price' => $product->get_price(),
+            'price_html' => apply_filters(
+                'formatted_woocommerce_price',
+                number_format(
+                    $product->get_price(),
+                    wc_get_price_decimals(),
+                    wc_get_price_decimal_separator(),
+                    wc_get_price_thousand_separator()
+                ),
+                $product->get_price(),
+                wc_get_price_decimals(),
+                $args['decimal_separator'],
+                $args['thousand_separator'],
+                $product->get_price()
+            )
         ];
 
         return wp_parse_args($args, $defaults);

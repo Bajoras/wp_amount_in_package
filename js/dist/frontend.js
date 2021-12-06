@@ -9,17 +9,28 @@ jQuery(function ($) {
             summaryWeightWrapper = quantityWrapper.find('.dk_package_amount_summary span.weight_wrapper'),
             summaryWeight = summaryWeightWrapper.find('span.weight'),
             summarySingleWeight = summaryWeightWrapper.find('span.single_weight'),
-            summarySingleWeightVal = parseFloat(summarySingleWeight.text() || 0)
+            summarySingleWeightVal = parseFloat(summarySingleWeight.text() || 0),
+            summaryPriceWrapper = quantityWrapper.find('.dk_package_amount_summary span.price_wrapper'),
+            summaryPrice = summaryPriceWrapper.find('span.price'),
+            summarySinglePrice = summaryPriceWrapper.find('span.single_price'),
+            summarySinglePriceVal = parseFloat(summarySinglePrice.text() || 0)
 
         if (isNaN(packageAmount) || packageAmount === 0) {
             packageAmount = 1
         }
-        if (isNaN(summarySingleWeightVal) || summarySingleWeightVal === 0 || summarySingleWeightVal === '') {
+        if (isNaN(summarySingleWeightVal) || summarySingleWeightVal === 0) {
             summarySingleWeightVal = 0;
             summaryWeightWrapper.hide()
         } else {
             summaryWeightWrapper.show()
         }
+        if (isNaN(summarySinglePriceVal) || summarySinglePriceVal === 0) {
+            summarySinglePriceVal = 0;
+            summaryPriceWrapper.hide()
+        } else {
+            summaryPriceWrapper.show()
+        }
+
         $(event.target.parentElement).find('.dk_package_amount_summary span.amount').text(packageAmount.toFixed(3))
 
         if (packageQtyInput.val() === "") {
@@ -33,7 +44,15 @@ jQuery(function ($) {
             summaryTotalAmount.text((quantity * packageAmount).toFixed(3))
             summarySingleWeight.text(summarySingleWeightVal)
             summaryWeight.text(quantity * summarySingleWeightVal)
+            summaryPrice.text(formatPrice(quantity * summarySinglePriceVal))
         }
+    }
+
+    function formatPrice(value) {
+        return value
+            .toFixed(_price_settings.woocommerce_price_num_decimals)
+            .replace('.', _price_settings.woocommerce_price_decimal_sep)
+            .replace(new RegExp("\\d(?=(\\d{3})+" + _price_settings.woocommerce_price_decimal_sep + ")", 'g'), '$&' + _price_settings.woocommerce_price_thousand_sep)
     }
 
     $(document.body).on('calculate', function (event) {
@@ -60,6 +79,7 @@ jQuery(function ($) {
             $(this).text(variation.variation_amount_in_package_unit)
         })
         form.find('span.weight_wrapper > span.single_weight').text(variation.weight)
+        form.find('span.price_wrapper > span.single_price').text(variation.display_price)
 
         form.trigger('calculate')
     })
