@@ -52,7 +52,7 @@ jQuery(function ($) {
         return value
             .toFixed(_price_settings.woocommerce_price_num_decimals)
             .replace('.', _price_settings.woocommerce_price_decimal_sep)
-            .replace(new RegExp("\\d(?=(\\d{3})+" + _price_settings.woocommerce_price_decimal_sep + ")", 'g'), '$&' + _price_settings.woocommerce_price_thousand_sep)
+            .replace(new RegExp("\\B(?=(\\d{3})+(?!\\d))", 'g'), '$&' + _price_settings.woocommerce_price_thousand_sep)
     }
 
     $(document.body).on('calculate', function (event) {
