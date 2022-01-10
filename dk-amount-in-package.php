@@ -7,7 +7,7 @@
  * Plugin Name:       Package amount calculator
  * Description:       Calculate quantity by the amount in the package
  * Plugin URI:        d.kasperavicius@gmail.com
- * Version:           1.5.1
+ * Version:           1.5.2
  * Author:            Dainius Kasperavicius
  * Author URI:        d.kasperavicius@gmail.com
  * Text Domain:       dk-amount-in-package
@@ -20,7 +20,7 @@ if (!defined('WPINC')) {
 class DkAmountInPackage
 {
 
-    private $version = '1.5.1';
+    private $version = '1.5.2';
     private $requestedAmountInPackage = '_requested_amount_in_package';
     private $amountInPackage = '_amount_in_package';
     private $totalAmountInPackage = '_total_amount_in_package';
@@ -526,7 +526,7 @@ class DkAmountInPackage
     public function dk_package_amount_order_item_display_meta_key(
         string $displayKey,
         WC_Meta_Data $meta,
-        WC_Order_Item_Product $item
+        WC_Order_Item $item
     ): string {
         switch ($displayKey) {
             case $this->amountInPackage:
@@ -543,17 +543,17 @@ class DkAmountInPackage
     public function dk_package_amount_order_item_display_meta_value(
         string $displayValue,
         WC_Meta_Data $meta,
-        WC_Order_Item_Product $item
+        WC_Order_Item $item
     ): string {
-        $formatValue = function (string $displayValue, WC_Order_Item_Product $item) {
+        $formatValue = function (string $displayValue, WC_Order_Item $item) {
             return sprintf('%s %s', $displayValue, $item->get_meta($this->amountInPackageUnit));
         };
         $displayMetas = [$this->amountInPackage, $this->totalAmountInPackage, $this->requestedAmountInPackage];
         if (in_array($meta->key, $displayMetas, true)) {
             return $formatValue($displayValue, $item);
-        } else {
-            return rtrim($displayValue, ':');
         }
+
+        return $displayValue;
     }
 
     public function dk_package_amount_hidden_order_itemmeta(array $items): array
