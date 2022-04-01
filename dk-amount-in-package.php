@@ -7,7 +7,7 @@
  * Plugin Name:       Package amount calculator
  * Description:       Calculate quantity by the amount in the package
  * Plugin URI:        d.kasperavicius@gmail.com
- * Version:           1.5.2
+ * Version:           1.6.0
  * Author:            Dainius Kasperavicius
  * Author URI:        d.kasperavicius@gmail.com
  * Text Domain:       dk-amount-in-package
@@ -20,7 +20,7 @@ if (!defined('WPINC')) {
 class DkAmountInPackage
 {
 
-    private $version = '1.5.2';
+    private $version = '1.6.0';
     private $requestedAmountInPackage = '_requested_amount_in_package';
     private $amountInPackage = '_amount_in_package';
     private $totalAmountInPackage = '_total_amount_in_package';
@@ -181,6 +181,18 @@ class DkAmountInPackage
                     $variation->update_meta_data($meta, $parentProduct->get_meta($meta));
                 }
             }
+        }, 10, 2);
+
+        add_filter('woocommerce_cart_product_price', function (string $priceHtml, WC_Product $product) {
+            return $this->getSimpleProductPriceHtml($priceHtml, $product);
+        }, 10, 2);
+
+        add_filter('woocommerce_get_price_html', function (string $priceHtml, WC_Product $product) {
+            return $this->getSimpleProductPriceHtml($priceHtml, $product);
+        }, 10, 2);
+
+        add_filter('woocommerce_variable_price_html', function (string $priceHtml, WC_Product $product) {
+            return $this->getVariableProductPriceHtml($priceHtml, $product);
         }, 10, 2);
     }
 
@@ -570,7 +582,7 @@ class DkAmountInPackage
         if ($packageAmount) {
             $packageUnit = $item->get_meta($this->amountInPackageUnit);
             $quantityLine = $item->get_meta($this->packageText).' '.$qtyDisplay.'<br/>';
-            $quantityLine .= $item->get_meta($this->totalAmountText).' '.$packageAmount.' '.$packageUnit;
+            $quantityLine .= $item->get_meta($this->totalAmountText).' '.$item->get_meta($this->totalAmountInPackage).' '.$packageUnit;
 
             return $quantityLine;
         }
@@ -589,18 +601,10 @@ class DkAmountInPackage
     public function dk_package_amount_add_cart_item_data(array $cartItemData, int $productId, int $variationId): array
     {
         $product = wc_get_product($productId);
-        if ($variationId > 0) {
-            $cartItemData[$this->amountInPackage] = $this->formatDecimal(
-                get_post_meta($variationId, $this->amountInPackage, true)
-            );
-            $cartItemData[$this->amountInPackageUnit] = $this->formatDecimal(
-                get_post_meta($variationId, $this->amountInPackageUnit, true)
-            );
-        } else {
-            $cartItemData[$this->amountInPackage] = $this->formatDecimal($product->get_meta($this->amountInPackage));
-            $cartItemData[$this->amountInPackageUnit] = $this->formatDecimal($product->get_meta($this->amountInPackageUnit));
-        }
-        $cartItemData[$this->requestedAmountInPackage] = $this->getRequestedPackageAmount();
+        $id = $variationId > 0 ? $variationId : $productId;
+        $cartItemData[$this->amountInPackage] = $this->formatDecimal(get_post_meta($id, $this->amountInPackage, true));
+        $cartItemData[$this->amountInPackageUnit] = get_post_meta($id, $this->amountInPackageUnit, true);
+        $cartItemData[$this->requestedAmountInPackage] = $this->getRequestedPackageAmount() ?? $cartItemData[$this->amountInPackage];
         $cartItemData[$this->metricText] = $product->get_meta($this->metricText);
         $cartItemData[$this->packageText] = $product->get_meta($this->packageText);
         $cartItemData[$this->totalAmountText] = $product->get_meta($this->totalAmountText,);
@@ -615,6 +619,90 @@ class DkAmountInPackage
         }
 
         return null;
+    }
+
+    public function getSimpleProductPriceHtml(string $priceHtml, WC_Product $product): string
+    {
+        if ($product->get_type() !== 'variation' && $product->get_type() !== 'simple') {
+            return $priceHtml;
+        }
+        if (!$this->isManageAmountEnable($product->get_type() === 'variation' ? $product->get_parent_id() : $product->get_id())) {
+            return $priceHtml;
+        }
+        $amountInPackage = floatval(get_post_meta($product->get_id(), $this->amountInPackage, true));
+
+        if ($amountInPackage <= 1) {
+            return $priceHtml;
+        }
+        $unit = get_post_meta($product->get_id(), $this->amountInPackageUnit, true);
+        if ('' === $product->get_price()) {
+            return $priceHtml;
+        } elseif ($product->is_on_sale()) {
+            $price = wc_format_sale_price(
+                    wc_get_price_to_display(
+                        $product,
+                        ['price' => $product->get_regular_price() / $amountInPackage]
+                    ),
+                    wc_get_price_to_display(
+                        $product,
+                        ['price' => $product->get_price() / $amountInPackage]
+                    )
+                ).$product->get_price_suffix().apply_filters('dk_package_amount_quantity_price_suffix', " / $unit");
+        } else {
+            $price = wc_price(
+                    wc_get_price_to_display(
+                        $product,
+                        ['price' => $product->get_price() / $amountInPackage])
+                ).$product->get_price_suffix().apply_filters('dk_package_amount_quantity_price_suffix', " / $unit");
+        }
+
+        return $price;
+    }
+
+
+    public function getVariableProductPriceHtml(string $priceHtml, WC_Product $product): string
+    {
+        if ($product->get_type() !== 'variable') {
+            return $priceHtml;
+        }
+        if (!$this->isManageAmountEnable($product->get_id())) {
+            return $priceHtml;
+        }
+
+        $prices = $product->get_variation_prices(true);
+
+        if (empty($prices['price'])) {
+            return $priceHtml;
+        }
+
+        $minPrice = current($prices['price']);
+        $minId = key($prices['price']);
+        $minAmountInPackage = floatval(get_post_meta($minId, $this->amountInPackage, true));
+        $maxPrice = end($prices['price']);
+        $maxId = key($prices['price']);
+        $maxAmountInPackage = floatval(get_post_meta($maxId, $this->amountInPackage, true));
+
+        $minRegPrice = current($prices['regular_price']);
+        $maxRegPrice = end($prices['regular_price']);
+
+        $minAmountInPackage < 1 ?: $minPrice /= $minAmountInPackage;
+        $minRegPrice /= $minAmountInPackage;
+        $maxAmountInPackage < 1 ?: $maxPrice /= $maxAmountInPackage;
+        $maxRegPrice /= $maxAmountInPackage;
+
+        if ($minPrice !== $maxPrice) {
+            $price = wc_format_price_range($minPrice, $maxPrice);
+        } elseif ($product->is_on_sale() && $minRegPrice === $maxRegPrice) {
+            $price = wc_format_sale_price(wc_price($maxRegPrice), wc_price($minPrice));
+        } else {
+            $price = wc_price($minPrice);
+        }
+        $unit = get_post_meta($maxId, $this->amountInPackageUnit, true);
+
+        return $price.$product->get_price_suffix().apply_filters(
+                'dk_package_amount_quantity_price_suffix',
+                " / $unit"
+            );
     }
 }
 
