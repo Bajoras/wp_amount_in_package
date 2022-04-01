@@ -7,7 +7,7 @@
  * Plugin Name:       Package amount calculator
  * Description:       Calculate quantity by the amount in the package
  * Plugin URI:        d.kasperavicius@gmail.com
- * Version:           1.6.0
+ * Version:           1.6.1
  * Author:            Dainius Kasperavicius
  * Author URI:        d.kasperavicius@gmail.com
  * Text Domain:       dk-amount-in-package
@@ -20,7 +20,7 @@ if (!defined('WPINC')) {
 class DkAmountInPackage
 {
 
-    private $version = '1.6.0';
+    private $version = '1.6.1';
     private $requestedAmountInPackage = '_requested_amount_in_package';
     private $amountInPackage = '_amount_in_package';
     private $totalAmountInPackage = '_total_amount_in_package';
@@ -138,7 +138,7 @@ class DkAmountInPackage
                         'id' => $this->variablePrefix.$this->amountInPackage.'_'.$loop,
                         'name' => $this->variablePrefix.$this->amountInPackage.'['.$loop.']',
                         'value' => $this->formatDecimal(
-                            max('1', $variationObject->get_meta($this->amountInPackage, true, 'edit'))
+                            $variationObject->get_meta($this->amountInPackage, true, 'edit')
                         ),
                         'label' => __('Amount', 'dk-amount-in-package'),
                         'description' => __('Amount in one package.', 'dk-amount-in-package'),
@@ -166,7 +166,7 @@ class DkAmountInPackage
             $parentManageAmountInPackage = $this->isManageAmountEnable($variation->get_parent_id());
             if ($parentManageAmountInPackage) {
                 if (($value = $this->getPostValue($this->variablePrefix.$this->amountInPackage, $loop)) !== null) {
-                    $variation->update_meta_data($this->amountInPackage, $this->formatDecimal(max('1', $value)));
+                    $variation->update_meta_data($this->amountInPackage, $this->formatDecimal($value));
                 }
                 if (($value = $this->getPostValue($this->variablePrefix.$this->amountInPackageUnit, $loop)) !== null) {
                     $variation->update_meta_data($this->amountInPackageUnit, $value);
@@ -257,7 +257,7 @@ class DkAmountInPackage
         woocommerce_wp_text_input([
             'id' => $this->amountInPackage,
             'wrapper_class' => 'hide_if_variable',
-            'value' => $this->formatDecimal(max('1', $product_object->get_meta($this->amountInPackage, true, 'edit'))),
+            'value' => $this->formatDecimal($product_object->get_meta($this->amountInPackage, true, 'edit')),
             'label' => __('Amount', 'dk-amount-in-package'),
             'desc_tip' => true,
             'description' => __('Amount in one package.', 'dk-amount-in-package'),
@@ -313,7 +313,7 @@ class DkAmountInPackage
                 if (($value = $this->getPostValue($this->amountInPackage)) !== null) {
                     $product->update_meta_data(
                         $this->amountInPackage,
-                        $this->formatDecimal(max('1', $value))
+                        $this->formatDecimal($value)
                     );
                 }
                 if (($value = $this->getPostValue($this->amountInPackageUnit)) !== null) {
@@ -503,13 +503,9 @@ class DkAmountInPackage
         array $values
     ): void {
         if ($this->isManageAmountEnable($item->get_product_id())) {
-            if ($item->get_variation_id() > 0) {
-                $packageAmount = max('1', get_post_meta($item->get_variation_id(), $this->amountInPackage, true));
-                $packageUnit = get_post_meta($item->get_variation_id(), $this->amountInPackageUnit, true);
-            } else {
-                $packageAmount = max('1', get_post_meta($item->get_product_id(), $this->amountInPackage, true));
-                $packageUnit = get_post_meta($item->get_product_id(), $this->amountInPackageUnit, true);
-            }
+            $id = $item->get_variation_id() > 0 ? $item->get_variation_id() : $item->get_product_id();
+            $packageAmount = get_post_meta($id, $this->amountInPackage, true);
+            $packageUnit = get_post_meta($id, $this->amountInPackageUnit, true);
             $item->update_meta_data(
                 $this->amountInPackage,
                 $this->formatDecimal($packageAmount)
