@@ -7,7 +7,7 @@
  * Plugin Name:       Package amount calculator
  * Description:       Calculate quantity by the amount in the package
  * Plugin URI:        d.kasperavicius@gmail.com
- * Version:           1.6.1
+ * Version:           1.6.2
  * Author:            Dainius Kasperavicius
  * Author URI:        d.kasperavicius@gmail.com
  * Text Domain:       dk-amount-in-package
@@ -20,7 +20,7 @@ if (!defined('WPINC')) {
 class DkAmountInPackage
 {
 
-    private $version = '1.6.1';
+    private $version = '1.6.2';
     private $requestedAmountInPackage = '_requested_amount_in_package';
     private $amountInPackage = '_amount_in_package';
     private $totalAmountInPackage = '_total_amount_in_package';
@@ -627,9 +627,11 @@ class DkAmountInPackage
         }
         $amountInPackage = floatval(get_post_meta($product->get_id(), $this->amountInPackage, true));
 
-        if ($amountInPackage <= 1) {
-            return $priceHtml;
-        }
+        $regPrice = $product->get_regular_price();
+        $price = $product->get_price();
+        $amountInPackage <= 0 ?: $regPrice /= $amountInPackage;
+        $price /= $amountInPackage;
+
         $unit = get_post_meta($product->get_id(), $this->amountInPackageUnit, true);
         if ('' === $product->get_price()) {
             return $priceHtml;
@@ -637,18 +639,18 @@ class DkAmountInPackage
             $price = wc_format_sale_price(
                     wc_get_price_to_display(
                         $product,
-                        ['price' => $product->get_regular_price() / $amountInPackage]
+                        ['price' => $regPrice]
                     ),
                     wc_get_price_to_display(
                         $product,
-                        ['price' => $product->get_price() / $amountInPackage]
+                        ['price' => $price]
                     )
                 ).$product->get_price_suffix().apply_filters('dk_package_amount_quantity_price_suffix', " / $unit");
         } else {
             $price = wc_price(
                     wc_get_price_to_display(
                         $product,
-                        ['price' => $product->get_price() / $amountInPackage])
+                        ['price' => $price])
                 ).$product->get_price_suffix().apply_filters('dk_package_amount_quantity_price_suffix', " / $unit");
         }
 
@@ -681,9 +683,9 @@ class DkAmountInPackage
         $minRegPrice = current($prices['regular_price']);
         $maxRegPrice = end($prices['regular_price']);
 
-        $minAmountInPackage < 1 ?: $minPrice /= $minAmountInPackage;
+        $minAmountInPackage <= 0 ?: $minPrice /= $minAmountInPackage;
         $minRegPrice /= $minAmountInPackage;
-        $maxAmountInPackage < 1 ?: $maxPrice /= $maxAmountInPackage;
+        $maxAmountInPackage <= 0 ?: $maxPrice /= $maxAmountInPackage;
         $maxRegPrice /= $maxAmountInPackage;
 
         if ($minPrice !== $maxPrice) {
